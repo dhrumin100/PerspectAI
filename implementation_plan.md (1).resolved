@@ -1,0 +1,1382 @@
+# PerspectAI: Misinformation Detection System - Complete Implementation Analysis
+
+**A comprehensive analytical plan for building a multi-agent fact-checking and misinformation prediction system**
+
+---
+
+## Executive Summary
+
+This document provides a complete implementation roadmap for PerspectAI, a dual-mode AI system combining rapid fact-checking with deep agentic research. The system uses vector databases, parallel agent architectures, and multi-source verification to predict and detect misinformation in real-time.
+
+---
+
+## System Overview
+
+PerspectAI operates in **two distinct modes**:
+
+1. **Rapid Mode** - Fast, lightweight fact-checking for simple queries
+2. **Deep Research Mode** - Multi-agent pipeline for comprehensive verification
+
+The system is built on **four core subsystems**:
+- Simple Input-Output Layer (Rapid AI)
+- End-to-End Research Pipeline (9-step workflow)
+- Vector Database Integration
+- Crisis Detection & Daily Monitoring
+
+---
+
+## 🎯 Core Architecture Components
+
+### Component 1: Simple Input-Output (Rapid AI Layer)
+
+**Purpose**: Provide instant fact-checking responses for simple user queries.
+
+**Process Flow**:
+
+```mermaid
+flowchart TD
+    A[User Input] --> B[Intent Classifier]
+    B --> C{Query Type?}
+    C -->|Misinformation Check| D[Vector DB Search]
+    C -->|Crisis Detection| D
+    C -->|Archive Lookup| D
+    C -->|General Question| D
+    D --> E{Sufficient Context?}
+    E -->|Yes| G[Context Ready]
+    E -->|No| F[On-Demand Web Search]
+    F --> G
+    G --> H[LLM Reasoning Layer]
+    H --> I[Verified Response]
+    I --> J[User Output]
+```
+
+**Implementation Steps**:
+
+1. **Input Processing**
+   - Accept text, voice (transcribed), or image (OCR)
+   - Normalize and sanitize input
+   - Extract initial entities
+
+2. **Intent Classification**
+   - Train classifier to detect query types:
+     - Fact-check request
+     - Crisis alert check
+     - Archive search
+     - General knowledge
+   - Use lightweight model (DistilBERT or similar)
+
+3. **Context Retrieval**
+   - Query vector database for similar claims
+   - Retrieve top-k relevant documents (k=5-10)
+   - Calculate relevance scores
+
+4. **Conditional Web Search**
+   - If vector DB confidence < 0.7, trigger web search
+   - Use search API (SerpAPI, Brave Search, or similar)
+   - Fetch top 5 results
+
+5. **LLM Reasoning**
+   - Prompt: "Given context: {context}, verify claim: {claim}"
+   - Generate explanation with sources
+   - Return structured response:
+     ```json
+     {
+       "verdict": "true|false|uncertain",
+       "confidence": 0.85,
+       "explanation": "...",
+       "sources": [...]
+     }
+     ```
+
+**Technology Stack**:
+- FastAPI backend (already in place)
+- Intent Classifier: scikit-learn or small transformer
+- Vector DB: Pinecone, Weaviate, or Qdrant
+- LLM: Gemini, GPT-4, or Claude
+
+---
+
+### Component 2: Deep Research Mode (9-Agent Pipeline)
+
+**Purpose**: Comprehensive fact-checking through multi-agent collaboration.
+
+**Agent Architecture**:
+
+```mermaid
+flowchart TD
+    Start[User Input] --> A1[Agent 1: Input Understanding]
+    A1 --> A2[Agent 2: Initial Web Search]
+    A2 --> A3[Agent 3: Planning Agent]
+    A3 --> A4[Agent 4: Parallel Research Agents]
+    A4 --> A5[Agent 5: Data Aggregation]
+    A5 --> A6[Agent 6: Analysis & Reasoning]
+    A6 --> A7[Agent 7: Report Generation]
+    A7 --> A8[Agent 8: Infographic Generator]
+    A8 --> A9[Agent 9: Interactive Chat Interface]
+    A9 --> End[Final Output]
+    
+    style A4 fill:#ff9
+    style A6 fill:#9f9
+    style A8 fill:#f99
+```
+
+**Detailed Agent Breakdown**:
+
+#### Agent 1: Input Understanding Agent
+```mermaid
+flowchart LR
+    Input[Raw Input] --> Parse[Parse Text/Voice/Image]
+    Parse --> Extract[Extract Entities]
+    Extract --> Struct[Structure Claim]
+    Struct --> Output[JSON Schema]
+    
+    Extract --> NER[NER: spaCy/Flair]
+    Extract --> Time[Temporal Extraction]
+    Extract --> Geo[Geographic Data]
+```
+
+**Implementation**:
+- Input formats: text, audio (Whisper API), image (GPT-4 Vision/OCR)
+- Named Entity Recognition (NER) using spaCy or Hugging Face
+- Extract:
+  - Actors (who)
+  - Actions (what)
+  - Time (when)
+  - Location (where)
+  - Source (original claim source)
+
+**Output Schema**:
+```json
+{
+  "original_claim": "India will ban XYZ platform next week",
+  "entities": {
+    "actors": ["India", "Government of India"],
+    "actions": ["ban"],
+    "objects": ["XYZ platform"],
+    "temporal": ["next week", "2025-11-30"],
+    "geographic": ["India"]
+  },
+  "claim_type": "policy_announcement",
+  "urgency": "medium"
+}
+```
+
+---
+
+#### Agent 2: Initial Web Search Agent
+```mermaid
+flowchart TD
+    Claim[Structured Claim] --> Query[Generate Search Queries]
+    Query --> APIs[Parallel API Calls]
+    APIs --> News[News APIs]
+    APIs --> Web[Web Search]
+    APIs --> Social[Social Media]
+    News --> Collect[Collect Results]
+    Web --> Collect
+    Social --> Collect
+    Collect --> Filter[Filter & Deduplicate]
+    Filter --> Rank[Rank by Relevance]
+    Rank --> Output[Top 20 Results]
+```
+
+**Implementation**:
+- Generate 3-5 search variations of the claim
+- Use multiple APIs:
+  - NewsAPI for news articles
+  - SerpAPI/Brave for general web
+  - Twitter API for social signals
+  - Google Fact Check Tools API
+- Filter by:
+  - Relevance score > 0.6
+  - Publication date (recent prioritized)
+  - Domain authority
+- Return top 20 diverse results
+
+---
+
+#### Agent 3: Planning Agent (The Brain)
+```mermaid
+flowchart TD
+    Initial[Initial Search Results] --> Analyze[Analyze Coverage]
+    Analyze --> Gaps[Identify Information Gaps]
+    Gaps --> Generate[Generate Research Questions]
+    Generate --> Q1[Question 1: Historical Context]
+    Generate --> Q2[Question 2: Official Statements]
+    Generate --> Q3[Question 3: Source Credibility]
+    Generate --> Q4[Question 4: Contradicting Evidence]
+    Generate --> Q5[Question 5: Timeline Verification]
+    Q1 --> Priorities[Assign Priorities]
+    Q2 --> Priorities
+    Q3 --> Priorities
+    Q4 --> Priorities
+    Q5 --> Priorities
+    Priorities --> Tasks[Create Task Queue]
+```
+
+**Implementation**:
+- Analyze initial results for:
+  - Coverage gaps
+  - Conflicting information
+  - Missing official sources
+  - Unverified claims
+- Generate 5-10 targeted research questions
+- Example questions for "India bans XYZ platform":
+  1. "Has India banned social media platforms before? What was the process?"
+  2. "Are there any official government statements regarding XYZ platform?"
+  3. "What are credible Indian news outlets reporting?"
+  4. "Are there parliamentary discussions or ministry announcements?"
+  5. "What is the origin of this claim? Who first reported it?"
+  6. "Does XYZ platform have a history of regulatory issues in India?"
+  7. "Are there any fact-checking organizations covering this?"
+
+**Output**: Task queue with prioritized research questions
+
+---
+
+#### Agent 4: Parallel Research Agents (Multi-Search)
+```mermaid
+flowchart TD
+    Tasks[Task Queue] --> Dispatch[Dispatcher]
+    Dispatch --> Agent4A[Research Agent A]
+    Dispatch --> Agent4B[Research Agent B]
+    Dispatch --> Agent4C[Research Agent C]
+    Dispatch --> Agent4D[Research Agent D]
+    Dispatch --> Agent4E[Research Agent E]
+    
+    Agent4A --> Search1[Targeted Search 1]
+    Agent4B --> Search2[Targeted Search 2]
+    Agent4C --> Search3[Targeted Search 3]
+    Agent4D --> Search4[Targeted Search 4]
+    Agent4E --> Search5[Targeted Search 5]
+    
+    Search1 --> Results[Aggregated Results]
+    Search2 --> Results
+    Search3 --> Results
+    Search4 --> Results
+    Search5 --> Results
+    
+    style Agent4A fill:#ffa
+    style Agent4B fill:#ffa
+    style Agent4C fill:#ffa
+    style Agent4D fill:#ffa
+    style Agent4E fill:#ffa
+```
+
+**Implementation**:
+- Spawn N parallel agents (N = number of research questions)
+- Each agent:
+  1. Takes one research question
+  2. Performs deep search (scraping allowed)
+  3. Follows links up to depth 2
+  4. Extracts relevant passages
+  5. Captures metadata (source, date, author)
+- Technologies:
+  - Async Python (asyncio, aiohttp)
+  - Playwright for JavaScript-heavy sites
+  - BeautifulSoup/Scrapy for parsing
+  - Rate limiting per domain
+- Each agent returns:
+  ```json
+  {
+    "question": "...",
+    "sources": [
+      {
+        "url": "...",
+        "title": "...",
+        "excerpt": "...",
+        "date": "...",
+        "credibility_score": 0.85
+      }
+    ],
+    "summary": "...",
+    "confidence": 0.9
+  }
+  ```
+
+---
+
+#### Agent 5: Data Aggregation Agent
+```mermaid
+flowchart TD
+    Results[All Research Results] --> Clean[Text Cleaning]
+    Clean --> Dedup[Deduplication]
+    Dedup --> Extract[Extract Key Facts]
+    Extract --> Timeline[Build Timeline]
+    Extract --> Sources[Source Mapping]
+    Extract --> Credibility[Credibility Scoring]
+    
+    Timeline --> KG[Knowledge Graph]
+    Sources --> KG
+    Credibility --> KG
+    
+    KG --> Output[Structured Knowledge Base]
+```
+
+**Implementation**:
+- **Deduplication**: Use MinHash/LSH to find duplicate content
+- **Fact Extraction**:
+  - Extract claims, statements, quotes
+  - Tag with source, timestamp, speaker
+- **Timeline Construction**:
+  - Sort events chronologically
+  - Identify origin, spread, verification points
+- **Credibility Scoring**:
+  - Domain authority (Alexa rank, domain age)
+  - Known fact-checkers (high score)
+  - Social media (lower score)
+  - Official sources (highest score)
+- **Knowledge Graph**:
+  ```
+  Nodes: Claims, Sources, Entities, Events
+  Edges: supports, contradicts, related_to, originated_from
+  ```
+
+**Output**: Structured knowledge base with:
+- Deduplicated facts
+- Timeline of events
+- Source credibility map
+- Contradiction matrix
+
+---
+
+#### Agent 6: Analysis & Reasoning Agent
+```mermaid
+flowchart TD
+    KB[Knowledge Base] --> Identify[Identify Contradictions]
+    KB --> Consensus[Find Consensus View]
+    KB --> Origin[Trace Claim Origin]
+    
+    Identify --> Matrix[Contradiction Matrix]
+    Consensus --> Support[Supporting Evidence]
+    Consensus --> Against[Contradicting Evidence]
+    Origin --> Spread[Spread Pattern]
+    
+    Matrix --> Reason[LLM Reasoning]
+    Support --> Reason
+    Against --> Reason
+    Spread --> Reason
+    
+    Reason --> Verdict[Generate Verdict]
+    Verdict --> Confidence[Calculate Confidence]
+    Confidence --> Explanation[Detailed Explanation]
+```
+
+**Implementation**:
+- **Contradiction Detection**:
+  - Compare claims pairwise
+  - Use NLI model (Natural Language Inference)
+  - Build contradiction matrix
+- **Consensus Analysis**:
+  - Weight sources by credibility
+  - Count supporting vs. contradicting sources
+  - Check for official confirmations/denials
+- **Origin Tracing**:
+  - Identify earliest mention
+  - Track spread pattern (viral vs. organic)
+  - Detect suspicious patterns (bot activity, coordinated inauthentic behavior)
+- **LLM Reasoning**:
+  - Prompt with full context
+  - Ask to evaluate truthfulness
+  - Request step-by-step reasoning
+- **Verdict Generation**:
+  - Confirmed True (>90% confidence, official sources)
+  - Likely True (70-90% confidence)
+  - Uncertain (30-70% confidence)
+  - Likely False (10-30% confidence)
+  - Confirmed False (<10% confidence or official debunk)
+
+**Output**:
+```json
+{
+  "verdict": "Likely False",
+  "confidence": 0.82,
+  "reasoning": "No official government statements found. Claim originated from unverified social media account. Major news outlets have not covered this story. Similar false claims have circulated before.",
+  "contradictions": [...],
+  "consensus": "No credible evidence supports this claim",
+  "spread_pattern": "viral_social_media",
+  "red_flags": ["unverified_origin", "no_official_coverage"]
+}
+```
+
+---
+
+#### Agent 7: Report Generation Agent
+```mermaid
+flowchart TD
+    Analysis[Analysis Results] --> Template[Select Report Template]
+    Template --> Sections[Generate Sections]
+    
+    Sections --> Exec[Executive Summary]
+    Sections --> Claim[Claim Analysis]
+    Sections --> Evidence[Evidence Breakdown]
+    Sections --> Timeline[Timeline of Events]
+    Sections --> Sources[Source Evaluation]
+    Sections --> Conclusion[Conclusion]
+    
+    Exec --> Format[Format Document]
+    Claim --> Format
+    Evidence --> Format
+    Timeline --> Format
+    Sources --> Format
+    Conclusion --> Format
+    
+    Format --> PDF[PDF Export]
+    Format --> MD[Markdown Export]
+    Format --> HTML[HTML Export]
+```
+
+**Implementation**:
+- Generate comprehensive report with sections:
+  1. **Executive Summary** (2-3 sentences)
+  2. **Claim Being Verified** (original claim + structured version)
+  3. **Verdict** (with confidence score)
+  4. **Key Findings** (bullet points)
+  5. **Evidence Analysis**:
+     - Supporting evidence
+     - Contradicting evidence
+     - Missing evidence
+  6. **Source Breakdown**:
+     - Official sources
+     - News media
+     - Social media signals
+     - Fact-checker verdicts
+  7. **Timeline of Events**
+  8. **Credibility Assessment**
+  9. **Red Flags & Concerns**
+  10. **Conclusion & Recommendations**
+  11. **All Sources** (linked bibliography)
+
+- Export formats:
+  - Markdown (for web display)
+  - PDF (for download)
+  - JSON (for API consumption)
+
+---
+
+#### Agent 8: Infographic Generator Agent
+```mermaid
+flowchart TD
+    Data[Report Data] --> Viz[Visualization Engine]
+    
+    Viz --> Graph3D[3D Source Network]
+    Viz --> Meter[Truth Score Meter]
+    Viz --> Timeline[Timeline Chart]
+    Viz --> Spread[Spread Map]
+    Viz --> Credibility[Credibility Distribution]
+    
+    Graph3D --> Render[D3.js/Three.js Rendering]
+    Meter --> Render
+    Timeline --> Render
+    Spread --> Render
+    Credibility --> Render
+    
+    Render --> Interactive[Interactive HTML]
+    Render --> Static[Static PNG/SVG]
+```
+
+**Implementation**:
+
+**3D Source Network Graph**:
+- Nodes: Sources (sized by credibility)
+- Edges: Relationships (agrees/disagrees)
+- Color coding:
+  - Green: Supports claim
+  - Red: Contradicts claim
+  - Gray: Neutral/unclear
+- Technology: Three.js or D3.js with force-directed layout
+
+**Truth Score Meter**:
+- Visual gauge showing confidence level
+- Color gradient: Red (false) → Yellow (uncertain) → Green (true)
+- Needle pointing to verdict
+
+**Timeline Visualization**:
+- Horizontal timeline
+- Key events marked
+- Origin highlighted
+- Spread velocity shown
+
+**Geographic Spread Map** (if applicable):
+- World map or country map
+- Heat map of where claim spread
+- First appearance locations
+
+**Credibility Distribution**:
+- Pie chart or bar chart
+- Sources grouped by type and credibility
+- Interactive tooltips
+
+**Technologies**:
+- Frontend: D3.js, Three.js, Chart.js
+- Backend: Generate data in JSON format
+- Export: Canvas → PNG, or SVG
+
+---
+
+#### Agent 9: Interactive Chat Interface (RAG)
+```mermaid
+flowchart TD
+    Report[Generated Report + Knowledge Base] --> Embed[Embed All Content]
+    Embed --> VectorStore[Vector Store]
+    
+    User[User Question] --> QueryEmbed[Embed Query]
+    QueryEmbed --> Search[Similarity Search]
+    Search --> VectorStore
+    VectorStore --> Context[Retrieve Relevant Context]
+    
+    Context --> LLM[LLM with Context]
+    User --> LLM
+    LLM --> Response[Natural Language Response]
+    Response --> User
+```
+
+**Implementation**:
+- Embed all report content (chunked)
+- Store in vector database
+- User can ask:
+  - "Why was this rated false?"
+  - "Show me the timeline"
+  - "Which sources disagree?"
+  - "What did the government say?"
+  - "Explain the contradiction"
+- Use RAG pattern:
+  1. Embed user question
+  2. Retrieve top-k relevant chunks
+  3. Pass to LLM as context
+  4. Generate answer
+- Technologies:
+  - LangChain for RAG orchestration
+  - Vector DB: same as main system
+  - LLM: Gemini/GPT-4/Claude
+
+---
+
+### Component 3: Vector Database Integration Pipeline
+
+**Purpose**: Aggregate news daily, embed content, enable fast semantic search.
+
+```mermaid
+flowchart TD
+    subgraph "Data Ingestion (Daily)"
+        A1[News Scrapers] --> A2[Academic Sources]
+        A1 --> A3[Government Advisories]
+        A1 --> A4[NGO Reports]
+        A1 --> A5[OSINT Sources]
+        A2 --> B[Data Collection Pipeline]
+        A3 --> B
+        A4 --> B
+        A5 --> B
+    end
+    
+    subgraph "Processing"
+        B --> C[Text Extraction]
+        C --> D[Cleaning & Normalization]
+        D --> E[Metadata Extraction]
+        E --> F[Deduplication]
+    end
+    
+    subgraph "Embedding & Storage"
+        F --> G[Generate Embeddings]
+        G --> H[Vector Database]
+        H --> I[Index Creation]
+    end
+    
+    subgraph "Query & Retrieval"
+        J[User Query] --> K[Query Embedding]
+        K --> L[Similarity Search]
+        L --> H
+        H --> M[Top-K Results]
+        M --> N{Sufficient?}
+        N -->|No| O[On-Demand Web Search]
+        N -->|Yes| P[Return Context]
+        O --> P
+    end
+    
+    subgraph "Usage"
+        P --> Q[Misinformation Detection]
+        P --> R[Crisis Signals]
+        P --> S[Trend Analysis]
+        P --> T[Journalist Archive]
+    end
+```
+
+**Detailed Implementation**:
+
+#### Data Ingestion (Automated Daily Runs)
+
+**Sources to Scrape**:
+1. **News Media**:
+   - Reuters, AP News, BBC, Al Jazeera
+   - Local news outlets (country-specific)
+   - NewsAPI integration
+   
+2. **Academic/Research**:
+   - arXiv updates
+   - PubMed (health)
+   - Think tank publications
+   
+3. **Government**:
+   - Official press releases
+   - Ministry announcements
+   - Legislative updates
+   
+4. **NGOs & International Orgs**:
+   - WHO, UN, Red Cross advisories
+   - Human rights organizations
+   
+5. **OSINT**:
+   - Verified social media accounts
+   - Fact-checking organizations
+   - Crisis monitoring platforms
+
+**Scraping Infrastructure**:
+- Scheduled jobs (cron/Airflow)
+- Frequency: Every 12 hours (or 24h for heavy sources)
+- Technology:
+  - Scrapy for robust scraping
+  - Playwright for JS-heavy sites
+  - RSS feed parsers
+- Error handling & retry logic
+- Rate limiting per domain
+
+#### Processing Pipeline
+
+**Text Extraction**:
+- HTML → clean text (BeautifulSoup, Trafilatura)
+- PDF → text (PyPDF2, pdfplumber)
+- Image → OCR if needed (Tesseract)
+
+**Cleaning & Normalization**:
+- Remove ads, navigation, footers
+- Fix encoding issues
+- Normalize whitespace
+- Language detection
+
+**Metadata Extraction**:
+```json
+{
+  "url": "...",
+  "title": "...",
+  "source": "Reuters",
+  "author": "...",
+  "publication_date": "2025-11-23",
+  "scrape_date": "2025-11-23",
+  "language": "en",
+  "category": "politics",
+  "entities": ["India", "XYZ platform"],
+  "content_hash": "..."
+}
+```
+
+**Deduplication**:
+- Content-based: MinHash/Simhash
+- URL-based: Check if already scraped
+- Near-duplicate detection (important for republished news)
+
+#### Embedding & Storage
+
+**Embedding Generation**:
+- Model options:
+  - OpenAI `text-embedding-3-small` (1536 dims)
+  - Sentence Transformers `all-MiniLM-L6-v2` (384 dims, free)
+  - Cohere embed-multilingual (for non-English)
+- Chunking strategy:
+  - Split long articles into 500-word chunks
+  - Overlap: 50 words
+  - Maintain metadata link to original
+- Batch processing for efficiency
+
+**Vector Database**:
+- Options:
+  - **Pinecone**: Managed, scalable, easy (recommended for hackathon)
+  - **Weaviate**: Open-source, feature-rich
+  - **Qdrant**: Fast, open-source
+  - **Chroma**: Simple, local-first
+- Index configuration:
+  - Metric: Cosine similarity
+  - Dimensions: Match embedding model
+  - Metadata filters: date, source, category
+
+**Schema**:
+```json
+{
+  "id": "doc_12345",
+  "vector": [0.123, -0.456, ...],
+  "metadata": {
+    "text": "...",
+    "url": "...",
+    "source": "...",
+    "date": "2025-11-23",
+    "category": "..."
+  }
+}
+```
+
+#### Query & Retrieval
+
+**User Query Flow**:
+1. User submits claim/question
+2. Embed query using same model
+3. Search vector DB (top-k=10)
+4. Filter by metadata if needed (date range, source type)
+5. Calculate relevance scores
+6. If max score < 0.7, trigger web search
+7. Merge results
+8. Return to LLM for reasoning
+
+**Hybrid Search** (Advanced):
+- Combine vector search with keyword search
+- BM25 + Vector similarity
+- Weighted combination
+
+---
+
+### Component 4: Daily Messaging & Crisis Detection System
+
+**Purpose**: Monitor for crisis signals and send proactive alerts.
+
+```mermaid
+flowchart TD
+    subgraph "Continuous Monitoring"
+        A1[Live News Feeds] --> B[Multi-Source Aggregator]
+        A2[Weather APIs] --> B
+        A3[Gov Warnings] --> B
+        A4[Social Media OSINT] --> B
+        A5[Disaster APIs] --> B
+    end
+    
+    subgraph "Signal Detection"
+        B --> C[Event Stream]
+        C --> D[Signal Detector ML]
+        D --> E{Crisis Signal?}
+    end
+    
+    subgraph "Classification"
+        E -->|Yes| F[Crisis Classifier]
+        F --> G[Severity Scoring]
+        G --> H{Severity Level}
+        H -->|High| I[Immediate Alert]
+        H -->|Medium| J[Human Review Queue]
+        H -->|Low| K[Log Only]
+    end
+    
+    subgraph "Validation & Response"
+        I --> L[Validate with Vector DB]
+        J --> M[Human Validator]
+        M --> L
+        L --> N[LLM: Generate Context]
+        N --> O[Recommended Actions]
+        O --> P[Alert to Users]
+    end
+    
+    subgraph "Delivery"
+        P --> Q[Push Notifications]
+        P --> R[Email Alerts]
+        P --> S[In-App Messages]
+    end
+```
+
+**Implementation**:
+
+#### Data Sources for Crisis Monitoring
+
+1. **Weather & Natural Disasters**:
+   - OpenWeatherMap API (severe weather alerts)
+   - USGS Earthquake API
+   - NOAA (hurricanes, tsunamis)
+   
+2. **Government Warnings**:
+   - Emergency alert systems
+   - Public health advisories
+   - Security alerts
+   
+3. **News Monitoring**:
+   - Real-time news APIs (NewsAPI, GDELT)
+   - Breaking news alerts
+   - RSS feeds from major outlets
+   
+4. **Social Media OSINT**:
+   - Twitter trending topics
+   - Reddit r/worldnews, r/news
+   - Telegram public channels (monitored)
+   
+5. **Health Data**:
+   - WHO disease outbreak news
+   - CDC updates
+   - Disease.sh API (epidemics)
+
+#### Signal Detection Model
+
+**Features to Monitor**:
+- Sudden spike in mentions of location + crisis keywords
+- Official warning system triggers
+- Multiple independent sources reporting same event
+- Verified accounts posting urgent updates
+- Meteorological/seismic data thresholds
+
+**ML Model**:
+- Binary classifier: Crisis vs. Non-crisis
+- Train on historical crisis events
+- Features:
+  - Text embeddings
+  - Source credibility
+  - Temporal patterns (sudden spike)
+  - Geographic clustering
+  - Keyword presence (earthquake, flood, attack, etc.)
+- Model: Gradient Boosting or Neural Network
+
+**Real-time Processing**:
+- Stream processing (Apache Kafka or similar)
+- Low latency (<1 minute from event to detection)
+
+#### Crisis Classification & Severity
+
+**Crisis Categories**:
+- Natural disaster (earthquake, flood, hurricane)
+- Public health (disease outbreak, contamination)
+- Security (attack, unrest, conflict)
+- Infrastructure (power outage, network failure)
+- Misinformation surge (coordinated disinfo campaign)
+
+**Severity Levels**:
+- **Critical**: Immediate threat to life, large-scale impact
+- **High**: Significant risk, many people affected
+- **Medium**: Developing situation, localized impact
+- **Low**: Minor incident, limited impact
+
+**Scoring Algorithm**:
+```python
+severity_score = (
+    geographic_scale * 0.3 +  # local/regional/national/global
+    population_affected * 0.3 +
+    time_sensitivity * 0.2 +  # how urgent
+    source_credibility * 0.2
+)
+```
+
+#### Human-in-the-Loop Validation
+
+**When to Trigger**:
+- Medium severity scores
+- Ambiguous signals
+- First-time event patterns
+- High-stakes situations (avoid false alarms)
+
+**Workflow**:
+1. Alert sent to human moderator
+2. Show: detected signal, sources, severity score, LLM analysis
+3. Human decides: Approve, Reject, or Request More Info
+4. If approved, proceed to alert users
+5. Learn from human feedback (improve model)
+
+#### Alert Generation
+
+**LLM-Generated Content**:
+- **Context**: "A magnitude 7.2 earthquake has been detected in [location] at [time]. Official sources confirm..."
+- **What to do**: "If you are in the area: 1) Stay calm, 2) Move to safe location, 3) Follow official instructions..."
+- **Sources**: Links to official warnings, news coverage
+- **Updates**: "We will update you as more information becomes available."
+
+**Personalization**:
+- Location-based filtering (only alert relevant users)
+- Language preference
+- Notification channel preference
+
+#### Delivery Mechanisms
+
+**Push Notifications**:
+- Mobile app (Firebase Cloud Messaging)
+- Browser notifications (Web Push API)
+- Desktop app notifications
+
+**Email**:
+- Critical alerts only
+- Formatted with context and links
+
+**In-App**:
+- Alert banner in app
+- Dedicated crisis section
+
+**SMS** (Optional, for critical):
+- Twilio integration
+- Only for life-threatening situations
+
+---
+
+## 🔄 Complete End-to-End Process Flows
+
+### Process 1: Simple Query (Rapid Mode)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant API
+    participant Classifier
+    participant VectorDB
+    participant SearchAPI
+    participant LLM
+    
+    User->>Frontend: Submit claim
+    Frontend->>API: POST /verify-quick
+    API->>Classifier: Classify intent
+    Classifier-->>API: "fact_check"
+    API->>VectorDB: Search similar claims
+    VectorDB-->>API: 5 results (score: 0.65)
+    API->>SearchAPI: Low confidence, search web
+    SearchAPI-->>API: Top 5 web results
+    API->>LLM: Verify with context
+    LLM-->>API: Verdict + explanation
+    API-->>Frontend: JSON response
+    Frontend-->>User: Display result
+```
+
+**Implementation Timeline**: 1-2 weeks
+
+**Technologies**:
+- Backend: FastAPI (already have)
+- Frontend: React (already have)
+- Vector DB: Pinecone
+- Search: SerpAPI
+- LLM: Gemini API
+
+---
+
+### Process 2: Deep Research Query (Agentic Mode)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Orchestrator
+    participant Agent1
+    participant Agent2
+    participant Agent3
+    participant Agent4
+    participant Agent5
+    participant Agent6
+    participant Agent7
+    participant VectorDB
+    
+    User->>Orchestrator: Submit complex claim
+    Orchestrator->>Agent1: Understand input
+    Agent1-->>Orchestrator: Structured claim JSON
+    Orchestrator->>Agent2: Initial web search
+    Agent2-->>Orchestrator: Top 20 results
+    Orchestrator->>Agent3: Generate research plan
+    Agent3-->>Orchestrator: 7 research questions
+    Orchestrator->>Agent4: Execute parallel research
+    Note over Agent4: 7 parallel agents search
+    Agent4-->>Orchestrator: Aggregated findings
+    Orchestrator->>Agent5: Aggregate & structure data
+    Agent5-->>VectorDB: Store for RAG
+    Agent5-->>Orchestrator: Knowledge base
+    Orchestrator->>Agent6: Analyze & reason
+    Agent6-->>Orchestrator: Verdict + analysis
+    Orchestrator->>Agent7: Generate report
+    Agent7-->>Orchestrator: Full report + infographics
+    Orchestrator-->>User: Complete fact-check package
+```
+
+**Implementation Timeline**: 4-6 weeks
+
+**Technologies**:
+- Agent orchestration: LangGraph or custom
+- Async processing: Python asyncio
+- Task queue: Celery + Redis
+- All previous technologies
+
+---
+
+### Process 3: Vector Database Daily Ingestion
+
+```mermaid
+sequenceDiagram
+    participant Scheduler
+    participant Scrapers
+    participant Processor
+    participant EmbedAPI
+    participant VectorDB
+    
+    Note over Scheduler: Every 12 hours
+    Scheduler->>Scrapers: Trigger scraping jobs
+    
+    par Parallel Scraping
+        Scrapers->>Scrapers: Scrape News APIs
+        Scrapers->>Scrapers: Scrape Government sites
+        Scrapers->>Scrapers: Scrape Academic sources
+        Scrapers->>Scrapers: Scrape OSINT
+    end
+    
+    Scrapers-->>Processor: Raw data (1000s of articles)
+    Processor->>Processor: Clean & normalize
+    Processor->>Processor: Extract metadata
+    Processor->>Processor: Deduplicate
+    Processor->>EmbedAPI: Batch embed (chunks of 100)
+    EmbedAPI-->>Processor: Embedding vectors
+    Processor->>VectorDB: Upsert vectors with metadata
+    VectorDB-->>Processor: Confirmation
+    Processor->>Processor: Log stats
+    Note over Processor: 3500 new docs added
+```
+
+**Implementation Timeline**: 2-3 weeks
+
+**Technologies**:
+- Scheduler: Apache Airflow or simple cron
+- Scraping: Scrapy + Playwright
+- Embedding: OpenAI or Sentence Transformers
+- Vector DB: Pinecone/Weaviate
+
+---
+
+### Process 4: Crisis Detection Flow
+
+```mermaid
+sequenceDiagram
+    participant Sources
+    participant Monitor
+    participant Detector
+    participant Classifier
+    participant VectorDB
+    participant LLM
+    participant HumanReview
+    participant NotificationService
+    participant Users
+    
+    loop Every 5 minutes
+        Sources->>Monitor: Stream events
+        Monitor->>Detector: Check for crisis signals
+        
+        alt Crisis Detected
+            Detector->>Classifier: Classify crisis type
+            Classifier->>Classifier: Calculate severity
+            
+            alt High Severity
+                Classifier->>VectorDB: Verify with historical data
+                VectorDB-->>Classifier: Context
+                Classifier->>LLM: Generate alert message
+                LLM-->>NotificationService: Alert content
+            else Medium Severity
+                Classifier->>HumanReview: Request validation
+                HumanReview-->>Classifier: Approved/Rejected
+                alt Approved
+                    Classifier->>LLM: Generate alert
+                    LLM-->>NotificationService: Alert content
+                end
+            else Low Severity
+                Classifier->>Classifier: Log only
+            end
+            
+            NotificationService->>Users: Send alerts
+            Note over Users: Push/Email/SMS
+        end
+    end
+```
+
+**Implementation Timeline**: 3-4 weeks
+
+**Technologies**:
+- Monitoring: Custom Python service
+- ML Model: scikit-learn or PyTorch
+- Notifications: Firebase + Twilio
+- Human review: Admin dashboard (React)
+
+---
+
+## 📊 System Integration Blueprint
+
+```mermaid
+graph TB
+    subgraph "User Layer"
+        U1[Web App]
+        U2[Mobile App]
+        U3[API Clients]
+    end
+    
+    subgraph "API Gateway"
+        AG[FastAPI Gateway]
+    end
+    
+    subgraph "Core Services"
+        S1[Rapid Verify Service]
+        S2[Deep Research Service]
+        S3[Crisis Monitor Service]
+        S4[Vector DB Manager]
+    end
+    
+    subgraph "Agent Layer"
+        A1[Input Agent]
+        A2[Search Agent]
+        A3[Planning Agent]
+        A4[Research Agents Pool]
+        A5[Aggregation Agent]
+        A6[Analysis Agent]
+        A7[Report Agent]
+        A8[Viz Agent]
+        A9[Chat Agent]
+    end
+    
+    subgraph "Data Layer"
+        D1[(Vector Database)]
+        D2[(PostgreSQL)]
+        D3[(Redis Cache)]
+        D4[Task Queue]
+    end
+    
+    subgraph "External Services"
+        E1[Search APIs]
+        E2[News APIs]
+        E3[LLM APIs]
+        E4[Notification Services]
+    end
+    
+    U1 --> AG
+    U2 --> AG
+    U3 --> AG
+    
+    AG --> S1
+    AG --> S2
+    AG --> S3
+    AG --> S4
+    
+    S1 --> A1
+    S1 --> A2
+    S1 --> A9
+    S1 --> D1
+    S1 --> E3
+    
+    S2 --> A1
+    S2 --> A2
+    S2 --> A3
+    S2 --> A4
+    S2 --> A5
+    S2 --> A6
+    S2 --> A7
+    S2 --> A8
+    S2 --> A9
+    
+    S3 --> D1
+    S3 --> E2
+    S3 --> E3
+    S3 --> E4
+    
+    S4 --> D1
+    
+    A4 --> D4
+    A4 --> E1
+    A5 --> D1
+    A9 --> D1
+    
+    D1 -.-> D3
+    S1 -.-> D2
+    S2 -.-> D2
+    S3 -.-> D2
+    
+    style S1 fill:#9f9
+    style S2 fill:#99f
+    style S3 fill:#f99
+    style S4 fill:#ff9
+```
+
+---
+
+## 🚀 Implementation Phases
+
+### Phase 1: Foundation (Week 1-2)
+**Goal**: Get basic rapid mode working
+
+- [x] FastAPI backend already exists
+- [ ] Set up vector database (Pinecone)
+- [ ] Implement simple intent classifier
+- [ ] Build basic search integration
+- [ ] Create simple LLM verification
+- [ ] Basic frontend integration
+
+**Deliverable**: Working rapid fact-check feature
+
+---
+
+### Phase 2: Vector DB Pipeline (Week 3-4)
+**Goal**: Automate data ingestion
+
+- [ ] Build web scrapers for news sources
+- [ ] Create data processing pipeline
+- [ ] Implement embedding generation
+- [ ] Set up daily ingestion schedule
+- [ ] Build monitoring dashboard
+
+**Deliverable**: Auto-updating knowledge base
+
+---
+
+### Phase 3: Deep Research Agents (Week 5-8)
+**Goal**: Multi-agent system operational
+
+**Week 5-6**:
+- [ ] Build Agent 1: Input Understanding
+- [ ] Build Agent 2: Initial Search
+- [ ] Build Agent 3: Planning
+- [ ] Test individual agents
+
+**Week 7-8**:
+- [ ] Build Agent 4: Parallel Research (most complex)
+- [ ] Build Agent 5: Aggregation
+- [ ] Build Agent 6: Analysis
+- [ ] Orchestration layer
+- [ ] End-to-end testing
+
+**Deliverable**: Working deep research mode
+
+---
+
+### Phase 4: Reporting & Visualization (Week 9-10)
+**Goal**: Make results beautiful and understandable
+
+- [ ] Build Agent 7: Report Generator
+- [ ] Build Agent 8: Infographic Generator
+- [ ] Create 3D network visualization
+- [ ] Build timeline charts
+- [ ] Export functionality
+
+**Deliverable**: Professional fact-check reports
+
+---
+
+### Phase 5: Interactive Chat & Crisis Detection (Week 11-12)
+**Goal**: Complete the system
+
+- [ ] Build Agent 9: RAG Chat Interface
+- [ ] Implement crisis monitoring service
+- [ ] Build alert system
+- [ ] Human review dashboard
+- [ ] Notification delivery
+
+**Deliverable**: Full system operational
+
+---
+
+### Phase 6: Polish & Deployment (Week 13-14)
+**Goal**: Production-ready
+
+- [ ] Performance optimization
+- [ ] Security hardening
+- [ ] Load testing
+- [ ] Documentation
+- [ ] Deployment (cloud infrastructure)
+- [ ] Monitoring & logging
+
+**Deliverable**: Deployed hackathon demo
+
+---
+
+## 💾 Technology Stack Summary
+
+### Backend
+- **Framework**: FastAPI (Python)
+- **Agent Orchestration**: LangGraph or custom
+- **Async Processing**: asyncio, aiohttp
+- **Task Queue**: Celery + Redis
+- **Web Scraping**: Scrapy, Playwright, BeautifulSoup
+
+### Frontend
+- **Framework**: React.js
+- **Visualization**: D3.js, Three.js, Chart.js
+- **State Management**: Redux or Zustand
+- **UI Components**: Material-UI or Tailwind
+
+### Data Storage
+- **Vector Database**: Pinecone (managed) or Weaviate (self-hosted)
+- **Relational DB**: PostgreSQL (metadata, users, reports)
+- **Cache**: Redis
+- **Object Storage**: AWS S3 (reports, images)
+
+### AI/ML
+- **LLM**: Google Gemini, OpenAI GPT-4, or Anthropic Claude
+- **Embeddings**: OpenAI `text-embedding-3-small` or Sentence Transformers
+- **NER**: spaCy
+- **Classification**: scikit-learn, PyTorch
+
+### External APIs
+- **Search**: SerpAPI, Brave Search API
+- **News**: NewsAPI, GDELT
+- **Fact-Checking**: Google Fact Check Tools API
+- **Weather**: OpenWeatherMap
+- **Notifications**: Firebase (push), Twilio (SMS), SendGrid (email)
+
+### Infrastructure
+- **Hosting**: AWS, GCP, or Azure
+- **Orchestration**: Docker + Kubernetes (optional) or simple VMs
+- **CI/CD**: GitHub Actions
+- **Monitoring**: Prometheus + Grafana or cloud-native tools
+
+---
+
+## 📈 Success Metrics
+
+### For Hackathon Demo
+
+**Rapid Mode**:
+- Response time < 5 seconds
+- Accuracy on test set > 80%
+- At least 50 sources in vector DB
+
+**Deep Research Mode**:
+- Complete pipeline execution < 2 minutes
+- Generate report with 5+ sources
+- Show 3D visualization
+
+**Crisis Detection**:
+- Detect simulated crisis event
+- Send alert within 1 minute
+- Human review interface working
+
+**Overall**:
+- Impressive demo with all 4 components working
+- Beautiful UI that wows judges
+- Clear explanation of technical architecture
+- Potential real-world impact story
+
+---
+
+## 🎯 Hackathon Strategy
+
+### Focus Areas
+1. **Make Rapid Mode Perfect** (Week 1-2)
+   - This is your fallback if time runs short
+   - Ensure it's fast, accurate, and impressive
+   
+2. **Build Core Agent Pipeline** (Week 3-7)
+   - Focus on Agents 1-6 (most critical)
+   - Agents 7-9 can be simplified if needed
+   
+3. **Wow Factor Features** (Week 8-10)
+   - 3D network visualization (judges love visuals)
+   - Crisis detection demo (shows innovation)
+   - Interactive chat (shows technical depth)
+
+### Risk Mitigation
+- **If behind schedule**: Simplify Agent 4 (reduce parallelism)
+- **If way behind**: Skip crisis detection, focus on core fact-checking
+- **Backup plan**: Ensure Rapid Mode + basic Agent pipeline works perfectly
+
+### Demo Preparation
+- **Story**: "Fighting misinformation with AI agents"
+- **Live Demo**: Pre-loaded test cases (controversial claims)
+- **Visuals**: Show 3D graph, timeline, report
+- **Impact**: "Can help journalists, fact-checkers, citizens during crises"
+
+---
+
+## Next Steps
+
+1. **Review this plan** - Does it capture your vision?
+2. **Prioritize features** - What's most important for hackathon?
+3. **Set up development environment** - Vector DB, APIs
+4. **Start with Phase 1** - Get rapid mode working ASAP
+5. **Build incrementally** - Test each component before moving forward
+
+Would you like me to:
+- Deep dive into any specific component?
+- Create code scaffolding for agents?
+- Set up the vector database integration?
+- Build the frontend mockups?

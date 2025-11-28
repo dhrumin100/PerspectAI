@@ -1,0 +1,145 @@
+# Additional helper methods to append to rapid_agent.py
+
+def _check_for_duplicate(self, query: str) -> bool:
+    """
+    Check if query is a near-duplicate of an existing vector DB entry
+    
+    Returns True if duplicate found (similarity > VECTOR_DUPLICATE_THRESHOLD)
+    """
+    if not self.vector_service.is_enabled():
+        return False
+    
+    try:
+        # Query vector DB for similar items
+        similar = self.vector_service.query_similar_claims(query, top_k=1)
+        
+        if similar and len(similar) > 0:
+            top_match_score = similar[0]['score']
+            
+            # If above duplicate threshold, it's a duplicate
+            if top_match_score >= Config.VECTOR_DUPLICATE_THRESHOLD:
+                print(f"🔍 Duplicate detected! Similarity: {top_match_score:.3f} (threshold: {Config.VECTOR_DUPLICATE_THRESHOLD})")
+                return True
+        
+        return False
+    except Exception as e:
+        print(f"⚠️  Error checking for duplicates: {e}")
+        return False  # On error, assume not duplicate (store anyway)
+
+
+def _enhance_with_credibility(self, verdict_data: dict, sources_list: list) -> dict:
+    """
+    Enhance verdict data with credibility scores from actual sources
+    
+    Args:
+        verdict_data: Verdict dict from parser
+        sources_list: List of source dicts with URLs and titles
+        
+    Returns:
+        Enhanced verdict_data with credibility scores added to evidence
+    """
+    try:
+        evidence = verdict_data.get('evidence', {})
+        
+        # Rank all sources by credibility
+        ranked_sources = CredibilityScorer.rank_evidence_by_credibility([
+            {
+                'url': s.get('url', ''),
+                'title': s.get('title', ''),
+                'excerpt': s.get('snippet', '')
+            }
+            for s in sources_list
+        ])
+        
+        # Map URLs to credibility scores
+        url_to_credibility = {s['url']: s['credibility_score'] for s in ranked_sources}
+        
+        # Enhance evidence items with credibility scores
+        for category in ['supporting', 'contradicting', 'neutral']:
+            if category in evidence and isinstance(evidence[category], list):
+                enhanced_items = []
+                for item in evidence[category]:
+                    if isinstance(item, dict):
+                        # Add credibility score if we have it
+                        url = item.get('url', '')
+                        if url in url_to_credibility:
+                            item['credibility_score'] = url_to_credibility[url]
+                        elif 'credibility_score' not in item:
+                            # Compute it if not present
+                            item['credibility_score'] = CredibilityScorer.score_source(
+                                url, 
+                                item.get('title', ''),
+                                item.get('excerpt', '')
+                            )
+                        enhanced_items.append(item)
+                evidence[category] = enhanced_items
+        
+        verdict_data['evidence'] = evidence
+        
+        # Set primary source from highest credibility
+        if ranked_sources:
+            primary_url = ranked_sources[0]['url']
+            if 'provenance' in verdict_data:
+                verdict_data['provenance']['primary_source'] = primary_url
+        
+        return verdict_data
+        
+    except Exception as e:
+        print(f"⚠️  Error enhancing credibility: {e}")
+        return verdict_data  # Return unchanged on error
+
+
+def _retry_verdict_parse(self, query: str, context: str, timestamp: str, error_msg: str) -> dict:
+    """
+    Retry verdict synthesis with a clarifying follow-up prompt
+    
+    Args:
+        query: Original query
+        context: Search context
+        timestamp: UTC timestamp
+        error_msg: Error message from first attempt
+        
+    Returns:
+        Verdict dict (or fallback if retry also fails)
+    """
+    retry_prompt = f"""Your previous response could not be parsed. Error: {error_msg}
+
+Please try again, following the format EXACTLY:
+
+First, output ONLY the JSON object (no extra text):
+{{
+  "verdict": "...",
+  "confidence": 0.X,
+  ...
+}}
+
+Then add a blank line.
+
+Then add the summary line:
+Short summary: ...
+
+Original query: {query}
+Context: {context[:500]}
+"""
+    
+    try:
+        response = self.client.models.generate_content(
+            model=self.model,
+            contents=retry_prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.1
+            )
+        )
+        
+        verdict_data = VerdictParser.parse(response.text.strip())
+        verdict_data['timestamp'] = timestamp
+        print("✅ Retry successful!")
+        return verdict_data
+        
+    except Exception as e:
+        print(f"❌ Retry also failed: {e}")
+        return VerdictParser.create_fallback_verdict(
+            query=query,
+            context=context[:500],
+            reason="Failed to parse structured response after retry"
+        )

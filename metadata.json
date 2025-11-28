@@ -1,0 +1,7 @@
+{
+  "name": "PerspectAI",
+  "description": "An AI-powered application that analyzes topics from multiple sources using Google Search, detects misinformation, and provides a neutral, comprehensive summary to give you every side of the story.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
