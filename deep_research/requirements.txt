@@ -1,0 +1,55 @@
+# Deep Research System - Required Dependencies
+
+# Core Frameworks
+crewai==0.80.0
+llama-index==0.12.0
+langchain==0.3.13
+langchain-community==0.3.13
+langchain-google-genai==2.0.8
+streamlit==1.41.1
+
+# LLM & AI
+google-generativeai==0.8.3
+openai==1.59.7
+sentence-transformers==3.3.1
+
+# Search & Data Collection
+google-search-results==2.4.2  # SerpAPI
+newsapi-python==0.2.7
+playwright==1.49.1
+beautifulsoup4==4.12.3
+lxml==5.3.0
+requests==2.32.3
+aiohttp==3.11.11
+
+# Vector Database
+pinecone-client==5.0.1
+chromadb==0.6.2
+
+# NLP & Text Processing
+spacy==3.8.3
+transformers==4.47.1
+textblob==0.18.0.post0
+nltk==3.9.1
+
+# Data Processing
+pandas==2.2.3
+numpy==2.2.1
+python-dotenv==1.0.1
+
+# Visualization
+plotly==5.24.1
+networkx==3.4.2
+matplotlib==3.10.0
+Pillow==11.0.0
+
+# PDF & Report Generation
+reportlab==4.2.5
+fpdf2==2.8.2
+markdown==3.7
+
+# Utilities
+pydantic==2.10.4
+python-dateutil==2.9.0.post0
+tqdm==4.67.1
+loguru==0.7.3

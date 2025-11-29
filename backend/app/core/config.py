@@ -4,8 +4,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    # Google Gemini API
-    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyC8LjtNjZj8VpjLD4zyXvsUEjuWl27VQy4")
+    # Google Gemini API - MUST be set in .env file
+    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+    
+    if not GOOGLE_API_KEY:
+        raise ValueError(
+            "GOOGLE_API_KEY not found in environment variables. "
+            "Please create a .env file in the backend directory with your API key: "
+            "GOOGLE_API_KEY=your_new_api_key_here"
+        )
     # Using Gemini 2.5 Pro for reliable grounded search support
     MODEL_NAME = "gemini-2.5-pro"
     SEARCH_MODEL_NAME = "gemini-2.5-pro"
